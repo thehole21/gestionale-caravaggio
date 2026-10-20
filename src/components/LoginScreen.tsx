@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { ARTISTS } from '@/lib/mock-data';
-import { AuthSession, Artist } from '@/types';
+import { Artist, AuthSession } from '@/types';
 
 interface LoginScreenProps {
+  artists: Artist[];
   onLogin: (session: AuthSession) => void;
 }
 
-export default function LoginScreen({ onLogin }: LoginScreenProps) {
+export default function LoginScreen({ artists, onLogin }: LoginScreenProps) {
   const [roleType, setRoleType] = useState<'artist' | 'admin'>('artist');
   const [email, setEmail] = useState('ruby@caravaggio.com');
   const [password, setPassword] = useState('password123');
@@ -37,9 +37,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         });
       }
     } else {
-      const foundArtist = ARTISTS.find(
+      const foundArtist = artists.find(
         (a) => a.email.toLowerCase() === email.toLowerCase()
-      ) || ARTISTS[0];
+      ) ?? artists[0];
+
+      if (!foundArtist) {
+        setErrorMsg('Nessun artista disponibile per il login.');
+        return;
+      }
 
       onLogin({
         role: 'artist',

@@ -4,9 +4,23 @@ export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
 export type StudioFeeStatus = 'unsettled' | 'settled' | 'pending_fee';
 export type PaymentMethod = 'cash' | 'pos' | 'transfer' | null;
 
+export type AuthSession =
+  | {
+      role: 'admin';
+      name: string;
+      studio: 'ALL';
+    }
+  | {
+      role: 'artist';
+      artistId: string;
+      name: string;
+      studio: 'ROMA' | 'MILANO';
+    };
+
 export interface Artist {
   id: string;
   name: string;
+  email: string;
   studio: 'ROMA' | 'MILANO';
   role: string;
   splitPct: number; // % che spetta allo studio (es. 30%)

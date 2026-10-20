@@ -6,9 +6,9 @@ import GoogleCalendarView from '@/components/GoogleCalendarView';
 import AccountingReportsView from '@/components/AccountingReportsView';
 import CheckoutSheetModal from '@/components/CheckoutSheetModal';
 import NewAppointmentModal from '@/components/NewAppointmentModal';
-import LoginScreen, { AuthSession } from '@/components/LoginScreen';
+import LoginScreen from '@/components/LoginScreen';
 import { ARTISTS, INITIAL_APPOINTMENTS } from '@/lib/mock-data';
-import { Appointment, PaymentMethod, StudioFeeStatus, StudioId } from '@/types';
+import { Appointment, AuthSession, PaymentMethod, StudioFeeStatus, StudioId } from '@/types';
 import { Bell, X } from 'lucide-react';
 
 export default function CaravaggioAppPage() {
@@ -72,7 +72,7 @@ export default function CaravaggioAppPage() {
   }
 
   const roleMode = session.role;
-  const activeArtistId = session.artistId || 'art-1';
+  const activeArtistId = session.role === 'artist' ? session.artistId : 'art-ruby';
 
   const toggleArtist = (id: string) => {
     if (roleMode === 'artist') return;
