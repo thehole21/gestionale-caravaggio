@@ -68,6 +68,16 @@ export const ARTISTS: Artist[] = [
   },
 ];
 
+// Helper per ottenere una data YYYY-MM-DD relativa a oggi
+export function getRelativeDateStr(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export const INITIAL_APPOINTMENTS: Appointment[] = [
   {
     id: 'apt-101',
@@ -76,7 +86,7 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
     title: 'Avambraccio Micro Color Realistic',
     artistId: 'art-ruby',
     studio: 'ROMA',
-    dayOffset: 2, // Mercoledì (Oggi)
+    date: getRelativeDateStr(0), // Oggi
     startTime: '14:15',
     endTime: '17:45',
     price: 500,
@@ -92,10 +102,10 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
     title: 'Surrealismo Costato',
     artistId: 'art-laura',
     studio: 'ROMA',
-    dayOffset: 2,
+    date: getRelativeDateStr(0), // Oggi
     startTime: '16:00',
-    endTime: '18:10',
-    price: null, // Importo mancante: test del popup serale
+    endTime: '18:15',
+    price: null, // Prezzo non inserito a calendario
     status: 'scheduled',
     paymentMethod: null,
     studioFeeStatus: 'unsettled',
@@ -105,10 +115,26 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
     id: 'apt-103',
     clientName: 'Alessandro Mancini',
     clientPhone: '+39 320 119 5532',
+    title: 'Micro Color Petto',
+    artistId: 'art-ruby',
+    studio: 'ROMA',
+    date: getRelativeDateStr(0), // Oggi mattina
+    startTime: '10:30',
+    endTime: '13:00',
+    price: 400,
+    status: 'completed',
+    paymentMethod: 'cash',
+    studioFeeStatus: 'pending_fee', // Chiuso ma % studio in sospeso
+    notes: 'Tatuatore deve ancora lasciare il 30% in cassa',
+  },
+  {
+    id: 'apt-104',
+    clientName: 'Tommaso Galli',
+    clientPhone: '+39 340 772 9104',
     title: 'Realismo Manica Intera',
     artistId: 'art-edoardo',
     studio: 'MILANO',
-    dayOffset: 2,
+    date: getRelativeDateStr(-1), // Ieri
     startTime: '11:00',
     endTime: '16:00',
     price: 700,
@@ -116,13 +142,20 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
     paymentMethod: 'pos',
     studioFeeStatus: 'settled',
   },
-];
-
-export const WEEK_DAYS = [
-  { offset: 0, short: 'LUN', num: '19' },
-  { offset: 1, short: 'MAR', num: '20' },
-  { offset: 2, short: 'MER', num: '21', isToday: true },
-  { offset: 3, short: 'GIO', num: '22' },
-  { offset: 4, short: 'VEN', num: '23' },
-  { offset: 5, short: 'SAB', num: '24' },
+  {
+    id: 'apt-105',
+    clientName: 'Sofia Pellegrini',
+    clientPhone: '+39 392 883 1920',
+    title: 'Fine Line Spalla',
+    artistId: 'art-ruby',
+    studio: 'ROMA',
+    date: getRelativeDateStr(2), // Tra 2 giorni (> 24h, annullabile senza penalità direzione)
+    startTime: '15:00',
+    endTime: '18:00',
+    price: 350,
+    status: 'scheduled',
+    paymentMethod: null,
+    studioFeeStatus: 'unsettled',
+    notes: 'Appuntamento tra 48h (test annullamento >24h)',
+  },
 ];

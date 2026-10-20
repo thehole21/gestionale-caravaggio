@@ -3,19 +3,14 @@ export type StudioId = 'ALL' | 'ROMA' | 'MILANO';
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
 export type StudioFeeStatus = 'unsettled' | 'settled' | 'pending_fee';
 export type PaymentMethod = 'cash' | 'pos' | 'transfer' | null;
+export type CalendarViewMode = 'day' | 'week' | 'month';
 
-export type AuthSession =
-  | {
-      role: 'admin';
-      name: string;
-      studio: 'ALL';
-    }
-  | {
-      role: 'artist';
-      artistId: string;
-      name: string;
-      studio: 'ROMA' | 'MILANO';
-    };
+export interface AuthSession {
+  role: 'admin' | 'artist';
+  artistId?: string;
+  name: string;
+  studio: 'ALL' | 'ROMA' | 'MILANO';
+}
 
 export interface Artist {
   id: string;
@@ -38,12 +33,14 @@ export interface Appointment {
   title: string;
   artistId: string;
   studio: 'ROMA' | 'MILANO';
-  dayOffset: number; // 0 = Lun, 1 = Mar, 2 = Mer (Oggi), ecc.
-  startTime: string; // "HH:MM" libera al minuto
-  endTime: string;   // "HH:MM" libera al minuto
-  price: number | null; // null se il tatuatore non l'ha messo a calendario
+  date: string;       // Formato "YYYY-MM-DD" (es. "2026-10-21") per navigare tra i mesi
+  dayOffset?: number; // Mantenuto per retrocompatibilità
+  startTime: string;  // "HH:MM"
+  endTime: string;    // "HH:MM"
+  price: number | null;
   status: AppointmentStatus;
   paymentMethod: PaymentMethod;
   studioFeeStatus: StudioFeeStatus;
   notes?: string;
+  cancelledLate?: boolean; // true se annullato a meno di 24h (visibile alla direzione)
 }

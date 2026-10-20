@@ -3,14 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, User, Phone, Sparkles, Euro, Calendar as CalendarIcon, FileText } from 'lucide-react';
 import { Appointment, Artist } from '@/types';
-import { WEEK_DAYS } from '@/lib/mock-data';
 
 interface NewAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (newApt: Appointment) => void;
   artists: Artist[];
-  defaultDayOffset: number;
+  defaultDate: string;
   defaultStartTime: string;
   roleMode: 'admin' | 'artist';
   activeArtistId: string;
@@ -21,7 +20,7 @@ export default function NewAppointmentModal({
   onClose,
   onSave,
   artists,
-  defaultDayOffset,
+  defaultDate,
   defaultStartTime,
   roleMode,
   activeArtistId,
@@ -30,7 +29,7 @@ export default function NewAppointmentModal({
   const [clientPhone, setClientPhone] = useState('');
   const [title, setTitle] = useState('');
   const [artistId, setArtistId] = useState(activeArtistId || artists[0]?.id || 'art-1');
-  const [dayOffset, setDayOffset] = useState(defaultDayOffset);
+  const [date, setDate] = useState(defaultDate);
   const [startTime, setStartTime] = useState(defaultStartTime);
   const [endTime, setEndTime] = useState('17:00');
   const [priceMode, setPriceMode] = useState<'fixed' | 'tbd'>('fixed');
@@ -43,7 +42,7 @@ export default function NewAppointmentModal({
       setClientPhone('');
       setTitle('');
       setNotes('');
-      setDayOffset(defaultDayOffset);
+      setDate(defaultDate);
       setStartTime(defaultStartTime);
 
       // Calcola automaticamente +2 ore come fine di default
@@ -55,7 +54,7 @@ export default function NewAppointmentModal({
         setArtistId(activeArtistId);
       }
     }
-  }, [isOpen, defaultDayOffset, defaultStartTime, roleMode, activeArtistId]);
+  }, [isOpen, defaultDate, defaultStartTime, roleMode, activeArtistId]);
 
   if (!isOpen) return null;
 
@@ -77,7 +76,7 @@ export default function NewAppointmentModal({
       title: title.trim() || 'Sessione Tattoo',
       artistId: selectedArtist.id,
       studio: selectedArtist.studio,
-      dayOffset,
+      date,
       startTime,
       endTime,
       price: numericPrice && numericPrice > 0 ? numericPrice : null,
@@ -199,17 +198,13 @@ export default function NewAppointmentModal({
               <label className="block text-[10px] font-bold uppercase text-[#86868B] mb-1 flex items-center gap-1">
                 <CalendarIcon className="w-3 h-3" /> Giorno
               </label>
-              <select
-                value={dayOffset}
-                onChange={(e) => setDayOffset(Number(e.target.value))}
+              <input
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 className="w-full bg-white rounded-xl px-2.5 py-2 text-xs font-bold text-[#1D1D1F] border border-[#E5E5EA] focus:outline-none focus:border-[#007AFF]"
-              >
-                {WEEK_DAYS.map((d) => (
-                  <option key={d.offset} value={d.offset}>
-                    {d.short} {d.num} {d.isToday ? '(Oggi)' : ''}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div>

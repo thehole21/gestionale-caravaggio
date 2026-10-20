@@ -7,7 +7,7 @@ import AccountingReportsView from '@/components/AccountingReportsView';
 import CheckoutSheetModal from '@/components/CheckoutSheetModal';
 import NewAppointmentModal from '@/components/NewAppointmentModal';
 import LoginScreen from '@/components/LoginScreen';
-import { ARTISTS, INITIAL_APPOINTMENTS } from '@/lib/mock-data';
+import { ARTISTS, getRelativeDateStr, INITIAL_APPOINTMENTS } from '@/lib/mock-data';
 import { Appointment, AuthSession, PaymentMethod, StudioFeeStatus, StudioId } from '@/types';
 import { Bell, X } from 'lucide-react';
 
@@ -27,11 +27,11 @@ export default function CaravaggioAppPage() {
   // Stato per il Modal di Nuovo Appuntamento
   const [newAptModal, setNewAptModal] = useState<{
     isOpen: boolean;
-    dayOffset: number;
+    date: string;
     startTime: string;
   }>({
     isOpen: false,
-    dayOffset: 2,
+    date: getRelativeDateStr(0),
     startTime: '15:00',
   });
 
@@ -72,7 +72,8 @@ export default function CaravaggioAppPage() {
   }
 
   const roleMode = session.role;
-  const activeArtistId = session.role === 'artist' ? session.artistId : 'art-ruby';
+  const activeArtistId =
+    session.role === 'artist' ? session.artistId ?? ARTISTS[0]?.id ?? '' : ARTISTS[0]?.id ?? '';
 
   const toggleArtist = (id: string) => {
     if (roleMode === 'artist') return;
@@ -83,7 +84,7 @@ export default function CaravaggioAppPage() {
 
   const pendingTodayAppts = appointments.filter(
     (a) =>
-      a.dayOffset === 2 &&
+      a.date === getRelativeDateStr(0) &&
       a.status === 'scheduled' &&
       (roleMode === 'admin' || a.artistId === activeArtistId)
   );
@@ -93,7 +94,7 @@ export default function CaravaggioAppPage() {
       pendingTodayAppts[0] ||
       appointments.find((a) => roleMode === 'admin' || a.artistId === activeArtistId) ||
       appointments[0];
-    setPushBannerApt(target);
+    setPushBannerApt(target ?? null);
   };
 
   const handleConfirmCheckout = (
@@ -126,8 +127,8 @@ export default function CaravaggioAppPage() {
     updateAppointments(updated);
   };
 
-  const handleOpenNewModal = (dayOffset = 2, startTime = '15:00') => {
-    setNewAptModal({ isOpen: true, dayOffset, startTime });
+  const handleOpenNewModal = (date = getRelativeDateStr(0), startTime = '15:00') => {
+    setNewAptModal({ isOpen: true, date, startTime });
   };
 
   const handleSaveNewAppointment = (newApt: Appointment) => {
@@ -185,7 +186,7 @@ export default function CaravaggioAppPage() {
         artists={ARTISTS}
         pendingCount={pendingTodayAppts.length}
         onTriggerPush={handleTriggerEveningPush}
-        onNewAppointment={() => handleOpenNewModal(2, '15:00')}
+        onNewAppointment={() => handleOpenNewModal(getRelativeDateStr(0), '15:00')}
         onLogout={handleLogout}
       />
 
@@ -196,8 +197,11 @@ export default function CaravaggioAppPage() {
           selectedArtists={selectedArtists}
           toggleArtist={toggleArtist}
           studioFilter={studioFilter}
+          setStudioFilter={setStudioFilter}
+          roleMode={roleMode}
+          activeArtistId={activeArtistId}
           onSelectAppointment={(apt) => setCheckoutApt(apt)}
-          onEmptySlotClick={(dayOffset, timeStr) => handleOpenNewModal(dayOffset, timeStr)}
+          onEmptySlotClick={(date, timeStr) => handleOpenNewModal(date, timeStr)}
         />
       ) : (
         <AccountingReportsView
@@ -221,7 +225,7 @@ export default function CaravaggioAppPage() {
         onClose={() => setNewAptModal((prev) => ({ ...prev, isOpen: false }))}
         onSave={handleSaveNewAppointment}
         artists={ARTISTS}
-        defaultDayOffset={newAptModal.dayOffset}
+        defaultDate={newAptModal.date}
         defaultStartTime={newAptModal.startTime}
         roleMode={roleMode}
         activeArtistId={activeArtistId}
