@@ -1,0 +1,128 @@
+import { Artist, Appointment } from '@/types';
+
+export const STUDIOS = {
+  ROMA: {
+    id: 'ROMA',
+    name: 'Roma • Via di Porta Labicana 56',
+    address: 'Via di Porta Labicana 56, Roma',
+  },
+  MILANO: {
+    id: 'MILANO',
+    name: 'Milano • Corso Lodi 18',
+    address: 'Corso Lodi 18, Milano',
+  },
+} as const;
+
+export const ARTISTS: Artist[] = [
+  {
+    id: 'art-ruby',
+    name: 'Ruby',
+    email: 'ruby@caravaggio.com',
+    studio: 'ROMA',
+    role: 'Resident • Micro Color Realistic',
+    splitPct: 30,
+    color: '#007AFF',
+    bgSoft: '#EBF4FF',
+    border: '#B8DAFF',
+    text: '#004A99',
+    avatar: 'RB',
+  },
+  {
+    id: 'art-laura',
+    name: 'Laura Rodriguez',
+    email: 'laura@caravaggio.com',
+    studio: 'ROMA',
+    role: 'Resident • Surrealismo & Fine Line',
+    splitPct: 30,
+    color: '#AF52DE',
+    bgSoft: '#F6ECFC',
+    border: '#DFBAF5',
+    text: '#6A248F',
+    avatar: 'LR',
+  },
+  {
+    id: 'art-edoardo',
+    name: 'Edoardo Visconti',
+    email: 'edoardo@caravaggio.com',
+    studio: 'MILANO',
+    role: 'Resident • Realism & Chicano',
+    splitPct: 35,
+    color: '#FF9500',
+    bgSoft: '#FFF5E5',
+    border: '#FFD699',
+    text: '#995700',
+    avatar: 'EV',
+  },
+  {
+    id: 'art-chiara',
+    name: 'Chiara Brambilla',
+    email: 'chiara@caravaggio.com',
+    studio: 'MILANO',
+    role: 'Resident • Ornamental & Blackwork',
+    splitPct: 35,
+    color: '#FF2D55',
+    bgSoft: '#FFEBEF',
+    border: '#FFB3C2',
+    text: '#9E0B28',
+    avatar: 'CB',
+  },
+];
+
+export const INITIAL_APPOINTMENTS: Appointment[] = [
+  {
+    id: 'apt-101',
+    clientName: 'Mario Rossi',
+    clientPhone: '+39 348 912 3401',
+    title: 'Avambraccio Micro Color Realistic',
+    artistId: 'art-ruby',
+    studio: 'ROMA',
+    dayOffset: 2, // Mercoledì (Oggi)
+    startTime: '14:15',
+    endTime: '17:45',
+    price: 500,
+    status: 'scheduled',
+    paymentMethod: null,
+    studioFeeStatus: 'unsettled',
+    notes: 'Acconto €100 già versato',
+  },
+  {
+    id: 'apt-102',
+    clientName: 'Giulia De Santis',
+    clientPhone: '+39 339 441 8821',
+    title: 'Surrealismo Costato',
+    artistId: 'art-laura',
+    studio: 'ROMA',
+    dayOffset: 2,
+    startTime: '16:00',
+    endTime: '18:10',
+    price: null, // Importo mancante: test del popup serale
+    status: 'scheduled',
+    paymentMethod: null,
+    studioFeeStatus: 'unsettled',
+    notes: 'Prezzo da definire a fine seduta',
+  },
+  {
+    id: 'apt-103',
+    clientName: 'Alessandro Mancini',
+    clientPhone: '+39 320 119 5532',
+    title: 'Realismo Manica Intera',
+    artistId: 'art-edoardo',
+    studio: 'MILANO',
+    dayOffset: 2,
+    startTime: '11:00',
+    endTime: '16:00',
+    price: 700,
+    status: 'completed',
+    paymentMethod: 'pos',
+    studioFeeStatus: 'settled',
+  },
+];
+
+export const WEEK_DAYS = [
+  { offset: 0, short: 'LUN', num: '19' },
+  { offset: 1, short: 'MAR', num: '20' },
+  { offset: 2, short: 'MER', num: '21', isToday: true },
+  { offset: 3, short: 'GIO', num: '22' },
+  { offset: 4, short: 'VEN', num: '23' },
+  { offset: 5, short: 'SAB', num: '24' },
+];
