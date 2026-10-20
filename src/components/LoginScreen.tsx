@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Artist, AuthSession } from '@/types';
 
@@ -74,9 +75,14 @@ export default function LoginScreen({ artists, onLogin }: LoginScreenProps) {
         
         {/* Header con Logo e Nome Studio */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 bg-[#1D1D1F] text-white rounded-2xl mx-auto flex items-center justify-center font-bold text-xl shadow-md tracking-tighter">
-            C
-          </div>
+          <Image
+            src="/favicon.ico"
+            alt="Logo Caravaggio's Tattoo Atelier"
+            width={56}
+            height={56}
+            unoptimized
+            className="mx-auto"
+          />
           <div>
             <h1 className="text-xl font-bold tracking-tight text-[#1D1D1F]">
               Caravaggio&apos;s Tattoo Atelier

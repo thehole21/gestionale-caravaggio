@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Calendar, BarChart3, Bell, Plus, LogOut, Menu } from 'lucide-react';
 import { Artist, StudioId } from '@/types';
 
@@ -37,9 +38,14 @@ export default function TopBar({
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-[#E5E5EA] px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
       {/* Brand + Segmented Control */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-[#1D1D1F] text-white flex items-center justify-center font-bold text-sm tracking-tight shadow-sm shrink-0">
-          C
-        </div>
+        <Image
+          src="/favicon.ico"
+          alt="Logo Caravaggio's Tattoo Atelier"
+          width={36}
+          height={36}
+          unoptimized
+          className="shrink-0"
+        />
         <div className="hidden sm:block">
           <h1 className="text-xs sm:text-sm font-bold tracking-tight text-[#1D1D1F] leading-none">
             Caravaggio&apos;s Atelier
