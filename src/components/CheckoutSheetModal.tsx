@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, CheckCircle2, Ban, Banknote, CreditCard, Building2, Clock } from 'lucide-react';
 import { Appointment, Artist, PaymentMethod, StudioFeeStatus } from '@/types';
+import { canCancelPrivately, formatDate } from '@/lib/agenda';
+import { useModalKeyboard } from './useModalKeyboard';
 
 interface CheckoutSheetModalProps {
+  roleMode: 'admin' | 'artist';
+  onEdit: (mode: 'edit' | 'move') => void;
   appointment: Appointment | null;
   artist: Artist | undefined;
   onClose: () => void;
@@ -22,25 +26,21 @@ export default function CheckoutSheetModal({
   artist,
   onClose,
   onConfirmCheckout,
+  roleMode,
+  onEdit,
 }: CheckoutSheetModalProps) {
-  const [outcome, setOutcome] = useState<'completed' | 'cancelled'>('completed');
-  const [priceInput, setPriceInput] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
-  const [feeGivenNow, setFeeGivenNow] = useState<boolean>(true);
+  useModalKeyboard(onClose);
+  const [outcome, setOutcome] = useState<'completed' | 'cancelled'>(appointment?.status === 'cancelled' ? 'cancelled' : 'completed');
+  const [priceInput, setPriceInput] = useState<string>(appointment?.price != null ? String(appointment.price) : '');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(appointment?.paymentMethod || 'cash');
+  const [feeGivenNow, setFeeGivenNow] = useState<boolean>(appointment?.studioFeeStatus === 'settled');
 
-  useEffect(() => {
-    if (appointment) {
-      setOutcome(appointment.status === 'cancelled' ? 'cancelled' : 'completed');
-      setPriceInput(appointment.price ? String(appointment.price) : '');
-      setPaymentMethod(appointment.paymentMethod || 'cash');
-      setFeeGivenNow(appointment.studioFeeStatus !== 'pending_fee');
-    }
-  }, [appointment]);
+
 
   if (!appointment || !artist) return null;
 
   const numericPrice = parseFloat(priceInput) || 0;
-  const studioFeeAmount = Math.round((numericPrice * artist.splitPct) / 100);
+  const studioFeeAmount = Math.round(numericPrice * artist.splitPct) / 100;
   const artistNetAmount = numericPrice - studioFeeAmount;
 
   const handleSave = () => {
@@ -60,16 +60,16 @@ export default function CheckoutSheetModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-[#E5E5EA] overflow-hidden animate-in slide-in-from-bottom duration-200">
+    <div role="dialog" aria-modal="true" aria-label="Dettagli appuntamento" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="modal-panel bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-[#E5E5EA] overflow-hidden">
         {/* Header Apple Sheet */}
         <div className="px-6 pt-5 pb-4 border-b border-[#F2F2F7] flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#007AFF]">
-              Check-out Fine Giornata • {appointment.studio}
+              {formatDate(appointment.date)} · {appointment.studio}
             </span>
             <h3 className="text-lg font-bold text-[#1D1D1F] mt-0.5">
-              Hai tatuato {appointment.clientName} oggi?
+              {appointment.clientName}
             </h3>
             <p className="text-xs text-[#86868B]">
               {appointment.title} ({appointment.startTime} - {appointment.endTime})
@@ -77,13 +77,17 @@ export default function CheckoutSheetModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Chiudi finestra"
             className="w-8 h-8 rounded-full bg-[#F2F2F7] flex items-center justify-center text-[#6E6E73] hover:text-[#1D1D1F]"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 overflow-y-auto">
+          <div className="flex flex-wrap gap-2"><button className="quiet-button" onClick={() => onEdit('edit')}>Modifica dettagli</button>{appointment.status === 'scheduled' && <button className="quiet-button" onClick={() => onEdit('move')}>Sposta appuntamento</button>}</div>
+          {appointment.notes && <p className="text-sm text-stone-600">{appointment.notes}</p>}
+          {appointment.clientPhone && <a className="block text-sm underline" href={`tel:${appointment.clientPhone}`}>{appointment.clientPhone}</a>}
           {/* Step 1: L'ho fatto / L'ho cancellato */}
           <div className="grid grid-cols-2 gap-2.5">
             <button
@@ -96,7 +100,7 @@ export default function CheckoutSheetModal({
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Sì, l&apos;ho fatto</span>
+              <span>Completato</span>
             </button>
 
             <button
@@ -112,6 +116,7 @@ export default function CheckoutSheetModal({
               <span>Annullato / No-Show</span>
             </button>
           </div>
+          {outcome === 'cancelled' && <p className="text-sm text-stone-600">{roleMode === 'artist' && canCancelPrivately(appointment) ? 'Entro 24 ore dalla creazione: l’annullamento sarà escluso dall’agenda e dai report della direzione.' : appointment.cancellationVisibility === 'private' ? 'Annullamento già escluso dai report della direzione.' : 'Questo annullamento sarà visibile nei report della direzione.'}</p>}
 
           {outcome === 'completed' && (
             <>
@@ -132,6 +137,8 @@ export default function CheckoutSheetModal({
                   <span className="text-2xl font-bold text-[#1D1D1F] mr-2">€</span>
                   <input
                     type="number"
+                    min="0.01"
+                    step="0.01"
                     value={priceInput}
                     onChange={(e) => setPriceInput(e.target.value)}
                     placeholder="Es. 500"
@@ -262,3 +269,4 @@ export default function CheckoutSheetModal({
     </div>
   );
 }
+

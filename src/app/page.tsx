@@ -1,235 +1,67 @@
 'use client';
-
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import TopBar from '@/components/TopBar';
 import GoogleCalendarView from '@/components/GoogleCalendarView';
 import AccountingReportsView from '@/components/AccountingReportsView';
 import CheckoutSheetModal from '@/components/CheckoutSheetModal';
 import NewAppointmentModal from '@/components/NewAppointmentModal';
 import LoginScreen from '@/components/LoginScreen';
-import { ARTISTS, getRelativeDateStr, INITIAL_APPOINTMENTS } from '@/lib/mock-data';
-import { Appointment, AuthSession, PaymentMethod, StudioFeeStatus, StudioId } from '@/types';
-import { Bell, X } from 'lucide-react';
+import { ARTISTS, INITIAL_APPOINTMENTS } from '@/lib/mock-data';
+import { cancellationVisibility, migrateAppointments, today, visibleAppointments } from '@/lib/agenda';
+import type { Appointment, AuthSession, PaymentMethod, StudioFeeStatus, StudioId } from '@/types';
+import { X } from 'lucide-react';
 
 export default function CaravaggioAppPage() {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [activeTab, setActiveTab] = useState<'calendar' | 'reports'>('calendar');
-  const [studioFilter, setStudioFilter] = useState<StudioId>('ALL');
-
-  const [appointments, setAppointments] = useState<Appointment[]>(INITIAL_APPOINTMENTS);
-  const [selectedArtists, setSelectedArtists] = useState<string[]>(
-    ARTISTS.map((a) => a.id)
-  );
-
-  const [checkoutApt, setCheckoutApt] = useState<Appointment | null>(null);
-  const [pushBannerApt, setPushBannerApt] = useState<Appointment | null>(null);
-
-  // Stato per il Modal di Nuovo Appuntamento
-  const [newAptModal, setNewAptModal] = useState<{
-    isOpen: boolean;
-    date: string;
-    startTime: string;
-  }>({
-    isOpen: false,
-    date: getRelativeDateStr(0),
-    startTime: '15:00',
-  });
-
-  useEffect(() => {
-    const saved = localStorage.getItem('caravaggio_demo_appts_v1');
-    if (saved) {
-      try {
-        setAppointments(JSON.parse(saved));
-      } catch {}
-    }
-  }, []);
-
-  const updateAppointments = (next: Appointment[]) => {
-    setAppointments(next);
-    localStorage.setItem('caravaggio_demo_appts_v1', JSON.stringify(next));
-  };
-
-  const handleLogin = (newSession: AuthSession) => {
-    setSession(newSession);
-    setActiveTab('calendar');
-    if (newSession.role === 'artist' && newSession.artistId) {
-      setSelectedArtists([newSession.artistId]);
-      setStudioFilter(newSession.studio);
-    } else {
-      setSelectedArtists(ARTISTS.map((a) => a.id));
-      setStudioFilter('ALL');
-    }
-  };
-
-  const handleLogout = () => {
-    setSession(null);
-    setPushBannerApt(null);
-    setCheckoutApt(null);
-  };
-
-  if (!session) {
-    return <LoginScreen artists={ARTISTS} onLogin={handleLogin} />;
-  }
-
-  const roleMode = session.role;
-  const activeArtistId =
-    session.role === 'artist' ? session.artistId ?? ARTISTS[0]?.id ?? '' : ARTISTS[0]?.id ?? '';
-
-  const toggleArtist = (id: string) => {
-    if (roleMode === 'artist') return;
-    setSelectedArtists((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const pendingTodayAppts = appointments.filter(
-    (a) =>
-      a.date === getRelativeDateStr(0) &&
-      a.status === 'scheduled' &&
-      (roleMode === 'admin' || a.artistId === activeArtistId)
-  );
-
-  const handleTriggerEveningPush = () => {
-    const target =
-      pendingTodayAppts[0] ||
-      appointments.find((a) => roleMode === 'admin' || a.artistId === activeArtistId) ||
-      appointments[0];
-    setPushBannerApt(target ?? null);
-  };
-
-  const handleConfirmCheckout = (
-    aptId: string,
-    outcome: 'completed' | 'cancelled',
-    finalPrice: number | null,
-    paymentMethod: PaymentMethod,
-    studioFeeStatus: StudioFeeStatus
-  ) => {
-    const updated = appointments.map((apt) =>
-      apt.id === aptId
-        ? {
-            ...apt,
-            status: outcome,
-            price: outcome === 'completed' ? finalPrice : apt.price,
-            paymentMethod,
-            studioFeeStatus,
-          }
-        : apt
-    );
-    updateAppointments(updated);
-    setCheckoutApt(null);
-    setPushBannerApt(null);
-  };
-
-  const handleSettlePendingFee = (aptId: string) => {
-    const updated = appointments.map((apt) =>
-      apt.id === aptId ? { ...apt, studioFeeStatus: 'settled' as const } : apt
-    );
-    updateAppointments(updated);
-  };
-
-  const handleOpenNewModal = (date = getRelativeDateStr(0), startTime = '15:00') => {
-    setNewAptModal({ isOpen: true, date, startTime });
-  };
-
-  const handleSaveNewAppointment = (newApt: Appointment) => {
-    updateAppointments([...appointments, newApt]);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-sans antialiased">
-      {/* Banner Notifica Push iOS Interattivo */}
-      {pushBannerApt && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-md bg-[#1D1D1F]/95 backdrop-blur-xl text-white rounded-3xl p-4 shadow-2xl border border-white/15 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top duration-200">
-          <div
-            onClick={() => {
-              setCheckoutApt(pushBannerApt);
-              setPushBannerApt(null);
-            }}
-            className="flex items-center gap-3 cursor-pointer flex-1"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-[#007AFF] flex items-center justify-center shrink-0">
-              <Bell className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#007AFF]">
-                  Notifica 19:30 • Caravaggio&apos;s
-                </span>
-                <span className="text-[10px] text-white/60">ora</span>
-              </div>
-              <p className="text-xs font-bold mt-0.5">
-                Hai tatuato {pushBannerApt.clientName} oggi?
-              </p>
-              <p className="text-[11px] text-white/75">
-                {pushBannerApt.price
-                  ? `Importo a calendario €${pushBannerApt.price}. Tocca per chiudere.`
-                  : `Importo mancante a calendario. Tocca per inserire prezzo e % studio.`}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setPushBannerApt(null)}
-            className="p-1.5 rounded-full hover:bg-white/10 text-white/60"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      <TopBar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        studioFilter={studioFilter}
-        setStudioFilter={setStudioFilter}
-        roleMode={roleMode}
-        activeArtistId={activeArtistId}
-        artists={ARTISTS}
-        pendingCount={pendingTodayAppts.length}
-        onTriggerPush={handleTriggerEveningPush}
-        onNewAppointment={() => handleOpenNewModal(getRelativeDateStr(0), '15:00')}
-        onLogout={handleLogout}
-      />
-
-      {activeTab === 'calendar' || roleMode === 'artist' ? (
-        <GoogleCalendarView
-          appointments={appointments}
-          artists={ARTISTS}
-          selectedArtists={selectedArtists}
-          toggleArtist={toggleArtist}
-          studioFilter={studioFilter}
-          setStudioFilter={setStudioFilter}
-          roleMode={roleMode}
-          activeArtistId={activeArtistId}
-          onSelectAppointment={(apt) => setCheckoutApt(apt)}
-          onEmptySlotClick={(date, timeStr) => handleOpenNewModal(date, timeStr)}
-        />
-      ) : (
-        <AccountingReportsView
-          appointments={appointments}
-          artists={ARTISTS}
-          studioFilter={studioFilter}
-          onSettlePendingFee={handleSettlePendingFee}
-          onOpenAppointment={(apt) => setCheckoutApt(apt)}
-        />
-      )}
-
-      <CheckoutSheetModal
-        appointment={checkoutApt}
-        artist={ARTISTS.find((a) => a.id === checkoutApt?.artistId)}
-        onClose={() => setCheckoutApt(null)}
-        onConfirmCheckout={handleConfirmCheckout}
-      />
-
-      <NewAppointmentModal
-        isOpen={newAptModal.isOpen}
-        onClose={() => setNewAptModal((prev) => ({ ...prev, isOpen: false }))}
-        onSave={handleSaveNewAppointment}
-        artists={ARTISTS}
-        defaultDate={newAptModal.date}
-        defaultStartTime={newAptModal.startTime}
-        roleMode={roleMode}
-        activeArtistId={activeArtistId}
-      />
-    </div>
-  );
+ const [session,setSession]=useState<AuthSession|null>(null);
+ const [activeTab,setActiveTab]=useState<'calendar'|'reports'>('calendar');
+ const [studioFilter,setStudioFilter]=useState<StudioId>('ALL');
+ const [appointments,setAppointments]=useState<Appointment[]>(INITIAL_APPOINTMENTS);
+ const [selectedArtists,setSelectedArtists]=useState<string[]>(ARTISTS.map(a=>a.id));
+ const [checkout,setCheckout]=useState<Appointment|null>(null);
+ const [editor,setEditor]=useState<{date:string;time:string;appointment?:Appointment;mode?:'edit'|'move'}|null>(null);
+ const [notice,setNotice]=useState('');
+ const [storageReady,setStorageReady]=useState(false);
+ const loadArchive=()=>{
+   try {
+     const saved=localStorage.getItem('caravaggio_demo_appts_v3') ?? localStorage.getItem('caravaggio_demo_appts_v2');
+     if(saved) setAppointments(migrateAppointments(JSON.parse(saved)));
+     setStorageReady(true);
+   } catch { setStorageReady(false); setNotice('Impossibile leggere l’archivio locale. I dati esistenti sono preservati; ricarica prima di salvare nuove modifiche.'); }
+ };
+ const update=(next:Appointment[])=>{
+   if(!storageReady) {setNotice('Archivio non disponibile: le modifiche non sono state salvate.');return false;}
+   try {localStorage.setItem('caravaggio_demo_appts_v3',JSON.stringify(next));setAppointments(next);return true;}
+   catch {setNotice('Spazio locale non disponibile: modifica non salvata.');return false;}
+ };
+ const login=(s:AuthSession)=>{loadArchive();setSession(s);setActiveTab('calendar');setSelectedArtists(s.role==='artist'?[s.artistId!]:ARTISTS.map(a=>a.id));setStudioFilter(s.role==='artist'?s.studio:'ALL');};
+ if(!session) return <><LoginScreen onLogin={login}/>{notice && <p role="alert" className="p-4 text-red-800">{notice}</p>}</>;
+ const isAdmin=session.role==='admin';
+ const accessible=visibleAppointments(appointments,session);
+ const artists=isAdmin?ARTISTS:ARTISTS.filter(a=>a.id===session.artistId);
+ const canEdit=(a:Appointment)=>isAdmin||a.artistId===session.artistId;
+ const pending=accessible.filter(a=>a.date===today()&&a.status==='scheduled'&&(studioFilter==='ALL'||a.studio===studioFilter));
+ const confirm=(id:string,outcome:'completed'|'cancelled',price:number|null,payment:PaymentMethod,fee:StudioFeeStatus)=>{
+   const original=appointments.find(a=>a.id===id);
+   if(!original||!canEdit(original))return;
+   if(outcome==='completed'&&(!price||price<=0||!Number.isFinite(price)||!payment))return;
+   const privateCancellation=outcome==='cancelled'&&cancellationVisibility(original,session.role)==='private';
+   const next=appointments.map(a=>a.id===id?{...a,status:outcome,price:outcome==='completed'?price:a.price,paymentMethod:payment,studioFeeStatus:fee,cancelledAt:outcome==='cancelled'?new Date().toISOString():undefined,cancellationVisibility:outcome==='cancelled'?(privateCancellation?'private' as const:'management' as const):undefined}:a);
+   if(update(next)){setCheckout(null);setNotice(privateCancellation?'Appuntamento annullato entro 24 ore dalla creazione. Escluso dall’agenda e dai report della direzione.':'Appuntamento aggiornato.');}
+ };
+ const save=(a:Appointment)=>{
+   const original=appointments.find(item=>item.id===a.id);
+   if((original&&!canEdit(original))||(!isAdmin&&a.artistId!==session.artistId))return false;
+   if(!a.date||a.endTime<=a.startTime){setNotice('Controlla la data e gli orari.');return false;}
+   const next=original?appointments.map(item=>item.id===a.id?{...a,createdAt:original.createdAt}:item):[...appointments,{...a,createdAt:new Date().toISOString()}];
+   if(update(next)){setNotice(original?'Appuntamento aggiornato.':'Appuntamento aggiunto.');return true;}return false;
+ };
+ return <div className="atelier-app">
+   <TopBar activeTab={activeTab} setActiveTab={setActiveTab} studioFilter={studioFilter} setStudioFilter={setStudioFilter} roleMode={session.role} activeArtistId={session.artistId||''} artists={artists} pendingCount={pending.length} onTriggerPush={()=>pending.length?setCheckout(pending[0]):setNotice('Nessun appuntamento da chiudere oggi.')} onLogout={()=>{setSession(null);setCheckout(null);setEditor(null);setNotice('');}}/>
+   {notice && <div className="app-notice" role="status"><span>{notice}</span><button aria-label="Chiudi messaggio" onClick={()=>setNotice('')}><X size={18}/></button></div>}
+   {activeTab==='calendar'?<GoogleCalendarView appointments={accessible} artists={artists} selectedArtists={selectedArtists} toggleArtist={id=>isAdmin&&setSelectedArtists(prev=>prev.includes(id)?prev.filter(a=>a!==id):[...prev,id])} studioFilter={studioFilter} roleMode={session.role} onSelectAppointment={setCheckout} onEmptySlotClick={(date,time)=>setEditor({date,time})}/>:<AccountingReportsView appointments={accessible} artists={artists} studioFilter={studioFilter} roleMode={session.role} onOpenAppointment={setCheckout} onSettlePendingFee={id=>{const a=appointments.find(item=>item.id===id);if(a&&canEdit(a)&&a.status==='completed'&&update(appointments.map(item=>item.id===id?{...item,studioFeeStatus:'settled'}:item)))setNotice('Versamento della quota studio registrato.');}}/>}
+   {checkout && <CheckoutSheetModal key={checkout.id} appointment={checkout} artist={artists.find(a=>a.id===checkout.artistId)} roleMode={session.role} onClose={()=>setCheckout(null)} onConfirmCheckout={confirm} onEdit={mode=>{setEditor({date:checkout.date,time:checkout.startTime,appointment:checkout,mode});setCheckout(null);}}/>}
+   {editor && <NewAppointmentModal key={editor.appointment?.id||'new'} isOpen onClose={()=>setEditor(null)} onSave={save} artists={artists} defaultDate={editor.date} defaultStartTime={editor.time} roleMode={session.role} activeArtistId={session.artistId||artists.find(a=>studioFilter==='ALL'||a.studio===studioFilter)?.id||artists[0].id} appointment={editor.appointment} mode={editor.mode}/>}
+   <footer className="app-footer">Caravaggio’s Tattoo Atelier · {isAdmin?'Direzione':'Area personale'}<span>Demo · dati salvati su questo dispositivo</span></footer>
+ </div>;
 }
+

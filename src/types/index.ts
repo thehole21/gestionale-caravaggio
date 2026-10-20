@@ -3,12 +3,12 @@ export type StudioId = 'ALL' | 'ROMA' | 'MILANO';
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled';
 export type StudioFeeStatus = 'unsettled' | 'settled' | 'pending_fee';
 export type PaymentMethod = 'cash' | 'pos' | 'transfer' | null;
-export type CalendarViewMode = 'day' | 'week' | 'month';
 
 export interface AuthSession {
   role: 'admin' | 'artist';
   artistId?: string;
   name: string;
+  email?: string;
   studio: 'ALL' | 'ROMA' | 'MILANO';
 }
 
@@ -18,7 +18,7 @@ export interface Artist {
   email: string;
   studio: 'ROMA' | 'MILANO';
   role: string;
-  splitPct: number; // % che spetta allo studio (es. 30%)
+  splitPct: number;
   color: string;
   bgSoft: string;
   border: string;
@@ -33,14 +33,15 @@ export interface Appointment {
   title: string;
   artistId: string;
   studio: 'ROMA' | 'MILANO';
-  date: string;       // Formato "YYYY-MM-DD" (es. "2026-10-21") per navigare tra i mesi
-  dayOffset?: number; // Mantenuto per retrocompatibilità
-  startTime: string;  // "HH:MM"
-  endTime: string;    // "HH:MM"
+  date: string;
+  createdAt?: string;
+  cancelledAt?: string;
+  cancellationVisibility?: 'private' | 'management';
+  startTime: string;
+  endTime: string;
   price: number | null;
   status: AppointmentStatus;
   paymentMethod: PaymentMethod;
   studioFeeStatus: StudioFeeStatus;
   notes?: string;
-  cancelledLate?: boolean; // true se annullato a meno di 24h (visibile alla direzione)
 }

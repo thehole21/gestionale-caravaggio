@@ -1,214 +1,48 @@
 'use client';
+import { useState } from 'react';
+import { Plus, ChevronLeft, ChevronRight, ArrowUpRight } from 'lucide-react';
+import type { Appointment, Artist, StudioId } from '@/types';
+import { addDays, dateObject, formatDate, money, movePeriod, periodBounds, startOfWeek, today, type Period } from '@/lib/agenda';
 
-import React, { useState, useEffect } from 'react';
-import {
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
-import { Appointment, Artist, StudioId } from '@/types';
-
-interface GoogleCalendarViewProps {
-  appointments: Appointment[];
-  artists: Artist[];
-  selectedArtists: string[];
-  toggleArtist: (id: string) => void;
-  studioFilter: StudioId;
-  setStudioFilter: (studio: StudioId) => void;
-  roleMode: 'admin' | 'artist';
-  activeArtistId: string;
+interface Props {
+  appointments: Appointment[]; artists: Artist[]; selectedArtists: string[];
+  toggleArtist: (id: string) => void; studioFilter: StudioId; roleMode: 'admin' | 'artist';
   onSelectAppointment: (apt: Appointment) => void;
-  onEmptySlotClick: (dateStr: string, timeStr: string) => void;
+  onEmptySlotClick: (date: string, time: string) => void;
 }
-
-const START_HOUR = 9;
-const END_HOUR = 21;
-
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-export default function GoogleCalendarView({
-  appointments,
-  artists,
-  selectedArtists,
-  toggleArtist,
-  studioFilter,
-  setStudioFilter,
-  roleMode,
-  activeArtistId,
-  onSelectAppointment,
-  onEmptySlotClick,
-}: GoogleCalendarViewProps) {
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const weekStart = new Date(selectedDate);
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + index);
-    return date;
-  });
-  const visibleArtists =
-    roleMode === 'artist'
-      ? [activeArtistId]
-      : selectedArtists;
-
-  const visibleAppointments = appointments.filter(
-    (appointment) =>
-      visibleArtists.includes(appointment.artistId) &&
-      (studioFilter === 'ALL' || appointment.studio === studioFilter)
-  );
-
-  const moveWeek = (amount: number) => {
-    setSelectedDate((current) => {
-      const next = new Date(current);
-      next.setDate(next.getDate() + amount * 7);
-      return next;
-    });
+export default function GoogleCalendarView({ appointments, artists, selectedArtists, toggleArtist, studioFilter, roleMode, onSelectAppointment, onEmptySlotClick }: Props) {
+  const [date, setDate] = useState(today);
+  const [view, setView] = useState<Period>('day');
+  const [start, end] = periodBounds(date, view);
+  const filtered = appointments.filter(a => selectedArtists.includes(a.artistId) && (studioFilter === 'ALL' || a.studio === studioFilter) && a.status !== 'cancelled');
+  const inPeriod = filtered.filter(a => a.date >= start && a.date <= end);
+  const dates = view === 'month'
+    ? Array.from({ length: 42 }, (_, i) => addDays(startOfWeek(start), i))
+    : Array.from({ length: view === 'week' ? 7 : 1 }, (_, i) => addDays(start, i));
+  const dayAppointments = (day: string) => filtered.filter(a => a.date === day).sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const card = (apt: Appointment) => {
+    const artist = artists.find(a => a.id === apt.artistId);
+    return <button key={apt.id} onClick={() => onSelectAppointment(apt)} className="appointment-card" style={{ borderLeftColor: artist?.color }}>
+      <div className="appointment-time">{apt.startTime}<span>{apt.endTime}</span></div>
+      <div className="min-w-0 flex-1"><strong className="block break-words">{apt.clientName}</strong><p className="mt-1 text-sm text-stone-500 break-words">{apt.title}</p><p className="mt-2 text-xs text-stone-500">{roleMode === 'admin' ? `${artist?.name} · ${apt.studio} · ` : ''}{apt.status === 'completed' ? (apt.studioFeeStatus === 'settled' ? 'Completato · quota saldata' : 'Completato · quota da versare') : 'In programma'}</p></div>
+      <div className="text-right shrink-0"><strong className="text-sm">{apt.price === null ? 'Da definire' : money(apt.price)}</strong><ArrowUpRight className="w-4 h-4 ml-auto mt-3 text-stone-400" /></div>
+    </button>;
   };
-
-  return (
-    <main className="mx-auto max-w-7xl p-3 sm:p-6 space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => moveWeek(-1)}
-            aria-label="Settimana precedente"
-            className="rounded-xl bg-white border border-[#E5E5EA] p-2 text-[#6E6E73] hover:text-[#1D1D1F]"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedDate(new Date())}
-            className="rounded-xl bg-white border border-[#E5E5EA] px-3 py-2 text-xs font-bold text-[#1D1D1F]"
-          >
-            Oggi
-          </button>
-          <button
-            type="button"
-            onClick={() => moveWeek(1)}
-            aria-label="Settimana successiva"
-            className="rounded-xl bg-white border border-[#E5E5EA] p-2 text-[#6E6E73] hover:text-[#1D1D1F]"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <h2 className="ml-1 text-sm font-bold text-[#1D1D1F]">
-            {new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(weekStart)}
-          </h2>
-        </div>
-
-        {roleMode === 'admin' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={studioFilter}
-              onChange={(event) => setStudioFilter(event.target.value as StudioId)}
-              aria-label="Filtra per sede"
-              className="rounded-xl border border-[#E5E5EA] bg-white px-3 py-2 text-xs font-semibold"
-            >
-              <option value="ALL">Tutte le sedi</option>
-              <option value="ROMA">Roma</option>
-              <option value="MILANO">Milano</option>
-            </select>
-            <div className="flex gap-1.5">
-              {artists.map((artist) => (
-                <button
-                  key={artist.id}
-                  type="button"
-                  onClick={() => toggleArtist(artist.id)}
-                  aria-pressed={selectedArtists.includes(artist.id)}
-                  className={`rounded-xl border px-2.5 py-2 text-xs font-semibold transition-colors ${
-                    selectedArtists.includes(artist.id)
-                      ? 'border-transparent text-white'
-                      : 'border-[#E5E5EA] bg-white text-[#6E6E73]'
-                  }`}
-                  style={
-                    selectedArtists.includes(artist.id)
-                      ? { backgroundColor: artist.color }
-                      : undefined
-                  }
-                >
-                  {artist.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="overflow-x-auto rounded-2xl border border-[#E5E5EA] bg-white">
-        <div className="grid min-w-[900px] grid-cols-7 divide-x divide-[#E5E5EA]">
-          {days.map((day) => {
-            const date = formatDate(day);
-            const dayAppointments = visibleAppointments
-              .filter((appointment) => appointment.date === date)
-              .sort((first, second) => first.startTime.localeCompare(second.startTime));
-            const isToday = date === formatDate(new Date());
-
-            return (
-              <section key={date} className="min-h-[420px]">
-                <header
-                  className={`sticky top-16 z-10 border-b border-[#E5E5EA] p-3 text-center ${
-                    isToday ? 'bg-[#EBF4FF]' : 'bg-[#FAFAFC]'
-                  }`}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-[#86868B]">
-                    {new Intl.DateTimeFormat('it-IT', { weekday: 'short' }).format(day)}
-                  </p>
-                  <p className={`mt-1 text-sm font-bold ${isToday ? 'text-[#007AFF]' : 'text-[#1D1D1F]'}`}>
-                    {day.getDate()}
-                  </p>
-                </header>
-                <div className="space-y-2 p-2">
-                  {dayAppointments.map((appointment) => {
-                    const artist = artists.find((item) => item.id === appointment.artistId);
-                    return (
-                      <button
-                        key={appointment.id}
-                        type="button"
-                        onClick={() => onSelectAppointment(appointment)}
-                        className="w-full rounded-xl border p-2 text-left text-[11px] transition-opacity hover:opacity-80"
-                        style={{
-                          backgroundColor: artist?.bgSoft ?? '#F5F5F7',
-                          borderColor: artist?.border ?? '#E5E5EA',
-                          color: artist?.text ?? '#1D1D1F',
-                        }}
-                      >
-                        <span className="block font-bold">
-                          {appointment.startTime}–{appointment.endTime}
-                        </span>
-                        <span className="mt-1 block font-semibold">{appointment.clientName}</span>
-                        <span className="block truncate">{appointment.title}</span>
-                        {roleMode === 'admin' && (
-                          <span className="mt-1 block opacity-75">{artist?.name}</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                  {Array.from({ length: END_HOUR - START_HOUR }, (_, index) => {
-                    const hour = START_HOUR + index;
-                    const time = `${String(hour).padStart(2, '0')}:00`;
-                    return (
-                      <button
-                        key={time}
-                        type="button"
-                        onClick={() => onEmptySlotClick(date, time)}
-                        className="w-full rounded-lg border border-dashed border-[#E5E5EA] py-1.5 text-[10px] text-[#86868B] hover:border-[#007AFF] hover:text-[#007AFF]"
-                        aria-label={`Nuovo appuntamento il ${date} alle ${time}`}
-                      >
-                        + {time}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      </div>
-    </main>
-  );
+  return <main className="workspace">
+    <section className="page-heading"><div><p className="eyebrow">{roleMode === 'admin' ? 'DIREZIONE · ROMA / MILANO' : 'IL TUO SPAZIO IN ATELIER'}</p><h1>{roleMode === 'admin' ? 'L’atelier, sotto controllo.' : 'La tua agenda.'}</h1><p className="text-stone-500 text-sm mt-2">Appuntamenti, clienti e chiusure. Tutto al posto giusto.</p></div><button className="primary-button" onClick={() => onEmptySlotClick(date, '10:00')}><Plus size={17} /> Nuovo appuntamento</button></section>
+    <section className="summary-grid">
+      <div><span>Appuntamenti nel periodo</span><strong>{inPeriod.length}</strong></div>
+      <div><span>Da completare</span><strong>{inPeriod.filter(a => a.status === 'scheduled').length}</strong></div>
+      <div><span>Valore programmato</span><strong>{money(inPeriod.filter(a => a.status === 'scheduled').reduce((s,a) => s + (a.price || 0),0))}</strong><small>Esclusi importi da definire</small></div>
+    </section>
+    <section className="agenda-panel">
+      <div className="calendar-toolbar"><div className="flex items-center gap-2"><button className="icon-button" aria-label="Periodo precedente" onClick={() => setDate(movePeriod(date, view, -1))}><ChevronLeft size={18}/></button><button className="icon-button" aria-label="Periodo successivo" onClick={() => setDate(movePeriod(date, view, 1))}><ChevronRight size={18}/></button><button className="quiet-button" onClick={() => setDate(today())}>Oggi</button></div><h2 className="capitalize font-semibold">{view === 'month' ? formatDate(date, { month: 'long', year: 'numeric' }) : view === 'week' ? `${formatDate(start, {day:'numeric',month:'short'})} – ${formatDate(end)}` : formatDate(date, {weekday:'long',day:'numeric',month:'long',year:'numeric'})}</h2><div className="segmented">{(['day','week','month'] as Period[]).map(v => <button key={v} aria-pressed={view===v} onClick={() => setView(v)}>{v==='day'?'Giorno':v==='week'?'Settimana':'Mese'}</button>)}</div></div>
+      <div className="calendar-filters"><label className="text-xs text-stone-500 flex items-center gap-2">Vai al giorno <input aria-label="Vai al giorno" type="date" value={date} onChange={e => e.target.value && setDate(e.target.value)} onClick={e => { try { e.currentTarget.showPicker(); } catch {} }} /></label>{roleMode === 'admin' && <div className="artist-filters">{artists.filter(a => studioFilter === 'ALL' || a.studio === studioFilter).map(a => <button key={a.id} aria-pressed={selectedArtists.includes(a.id)} onClick={() => toggleArtist(a.id)}><i style={{background:a.color}}/>{a.name}</button>)}</div>}</div>
+      {view === 'month' ? <>
+        <div className="month-grid month-labels">{['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=><span key={d}>{d}</span>)}</div>
+        <div className="month-grid">{dates.map(day => { const appts=dayAppointments(day); return <button key={day} className={`month-cell ${day===today()?'is-today':''} ${day.slice(0,7)!==date.slice(0,7)?'outside-month':''} ${day===date?'selected-date':''}`} onClick={() => setDate(day)} aria-label={`${formatDate(day)}: ${appts.length} appuntamenti`}><span className="day-number">{dateObject(day).getDate()}</span>{appts.length>0 && <><span className="month-count">{appts.length} <span className="hidden sm:inline">appuntamenti</span></span><div className="hidden lg:block text-left mt-2 space-y-1">{appts.slice(0,2).map(a=><p className="truncate text-xs" key={a.id}>{a.startTime} {a.clientName}</p>)}</div></>}</button>; })}</div>
+        <div className="month-detail"><div className="flex items-center justify-between gap-2 mb-4"><h3 className="font-semibold">{formatDate(date)}</h3><button className="quiet-button" onClick={()=>onEmptySlotClick(date,'10:00')}><Plus size={15}/> Aggiungi</button></div>{dayAppointments(date).map(card)}{!dayAppointments(date).length && <p className="empty-state">Nessun appuntamento. Aggiungi una seduta per questo giorno.</p>}</div>
+      </> : <div className={view==='week'?'week-agenda':'day-agenda'}>{dates.map(day=><section key={day} className="agenda-day">{view==='week' && <button className={`day-heading ${day===today()?'text-amber-800':''}`} onClick={()=>{setDate(day);setView('day');}}>{formatDate(day,{weekday:'short',day:'numeric',month:'short'})}<span>{dayAppointments(day).length} appuntamenti</span></button>}{dayAppointments(day).map(card)}{!dayAppointments(day).length && <div className="empty-state">Agenda libera</div>}<button className="add-slot" onClick={()=>onEmptySlotClick(day,'10:00')}><Plus size={16}/> Aggiungi appuntamento</button></section>)}</div>}
+    </section>
+  </main>;
 }
